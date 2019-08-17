@@ -1,5 +1,5 @@
 <?php
-namespace App\Babel\Extension\template;//The 'template' should be replaced by the real oj code.
+namespace App\Babel\Extension\bzoj;
 
 use App\Babel\Submit\Curl;
 use App\Models\SubmissionModel;

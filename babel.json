@@ -1,13 +1,13 @@
 {
-    "name":"Template",
-    "code":"template",
-    "icon":"resources/template@2x.png",
+    "name":"BZOJ",
+    "code":"bzoj",
+    "icon":"resources/bzoj@2x.png",
     "type":"virtual-judge",
-    "description": "Template of Interface for NOJ",
+    "description": "BZOJ interface for NOJ",
     "license": "MIT",
-    "repository":"https://github.com/NJUPTAAA/NOJ_Extension_Babel_Template",
+    "repository":"https://github.com/NJUPTAAA/NOJ_Extension_BZOJ",
     "version":"0.0.1",
-    "website":"https://acm.njupt.edu.cn/",
+    "website":"https://www.lydsy.com/",
     "custom":{
         "css":"resources/custom.css"
     },
@@ -18,6 +18,6 @@
         "installer":"Installer"
     },
     "require":{
-        "NOJ":"^0.3.0"
+        "NOJ":"0.3.1"
     }
 }

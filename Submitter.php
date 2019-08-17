@@ -1,5 +1,5 @@
 <?php
-namespace App\Babel\Extension\template;//The 'template' should be replaced by the real oj code.
+namespace App\Babel\Extension\bzoj;
 
 use App\Babel\Submit\Curl;
 use App\Models\CompilerModel;
@@ -20,7 +20,7 @@ class Submitter extends Curl
         $this->sub=& $sub;
         $this->post_data=$all_data;
         $judger=new JudgerModel();
-        $this->oid=OJModel::oid('template');//The 'template' should be replaced by the real oj code.
+        $this->oid=OJModel::oid('bzoj');
         if(is_null($this->oid)) {
             throw new Exception("Online Judge Not Found");
         }
