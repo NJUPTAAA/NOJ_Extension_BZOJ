@@ -90,6 +90,7 @@ class Submitter extends Curl
                 ]);
                 if (strpos($response, $id) !== false) {
                     $this->sub['remote_id'] = $remoteId;
+                    $this->sub['jid'] = $this->selectedJudger['jid'];
                     return;
                 }
             }
