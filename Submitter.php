@@ -3,10 +3,11 @@ namespace App\Babel\Extension\bzoj;
 
 use App\Babel\Submit\Curl;
 use App\Models\CompilerModel;
+use App\Models\ProblemModel;
 use App\Models\JudgerModel;
 use App\Models\OJModel;
 use Illuminate\Support\Facades\Validator;
-use Requests;
+use KubAT\PhpSimple\HtmlDomParser;
 
 class Submitter extends Curl
 {
@@ -30,58 +31,71 @@ class Submitter extends Curl
 
     private function _login()
     {
-        $response=$this->grab_page([
-            "site"=>'http://poj.org',
-            "oj"=>'poj',
-            "handle"=>$this->selectedJudger["handle"]
+        $response = $this->grab_page([
+            'site' => 'https://www.lydsy.com/JudgeOnline/',
+            'oj' => 'bzoj',
+            'handle' => $this->selectedJudger['handle'],
         ]);
-        if (strpos($response, 'Log Out')===false) {
-            $params=[
-                'user_id1' => $this->selectedJudger["handle"],
-                'password1' => $this->selectedJudger["password"],
-                'B1' => 'login',
-            ];
+        if (strpos($response, 'Logout') === false) {
             $this->login([
-                "url"=>'http://poj.org/login',
-                "data"=>http_build_query($params),
-                "oj"=>'poj',
-                "ret"=>true,
-                "handle"=>$this->selectedJudger["handle"]
+                'url' => 'https://www.lydsy.com/JudgeOnline/login.php',
+                'data' => http_build_query([
+                    'user_id' => $this->selectedJudger['handle'],
+                    'password' => $this->selectedJudger['password'],
+                ]),
+                'oj' => 'bzoj',
+                'handle' => $this->selectedJudger['handle'],
             ]);
         }
     }
 
     private function _submit()
     {
-        $params=[
-            'problem_id' => $this->post_data['iid'],
-            'language' => $this->post_data['lang'],
-            'source' => base64_encode($this->post_data["solution"]),
-            'encoded' => 1, // Optional, but sometimes base64 seems smaller than url encode
-        ];
+        $problem = new ProblemModel();
+        $problem = $problem->basic($this->post_data['pid']);
+        $compiler = new CompilerModel();
+        $compiler = $compiler->detail($this->post_data['coid']);
 
-        $response=$this->post_data([
-            "site"=>"http://poj.org/submit",
-            "data"=>http_build_query($params),
-            "oj"=>"poj",
-            "ret"=>true,
-            "follow"=>false,
-            "returnHeader"=>true,
-            "postJson"=>false,
-            "extraHeaders"=>[],
-            "handle"=>$this->selectedJudger["handle"]
+        // In order to confirm remote id
+        $id = substr(md5(uniqid(microtime(true), true)), 0, 6);
+        if ($compiler['comp'] == 'pascal') {
+            $pattern = "{ $id }\n";
+        } else {
+            $pattern = "/*$id*/\n";
+        }
+
+        $response = $this->post_data([
+            'site' => 'https://www.lydsy.com/JudgeOnline/submit.php',
+            'data' => http_build_query([
+                'id' => $problem['index_id'],
+                'language' => $compiler['lcode'],
+                'source' => $pattern . $this->post_data['solution'],
+            ]),
+            'oj' => 'bzoj',
+            'ret' => true,
+            'follow' => true,
+            'returnHeader' => false,
+            'handle' => $this->selectedJudger['handle'],
         ]);
 
-        if (!preg_match('/Location: .*\/status/', $response, $match)) {
-            $this->sub['verdict']='Submission Error';
-        } else {
-            $res=Requests::get('http://poj.org/status?problem_id='.$this->post_data['iid'].'&user_id='.urlencode($this->selectedJudger["handle"]));
-            if (!preg_match('/<tr align=center><td>(\d+)<\/td>/', $res->body, $match)) {
-                $this->sub['verdict']='Submission Error';
-            } else {
-                $this->sub['remote_id']=$match[1];
+        $dom = HtmlDomParser::str_get_html($response);
+        $table = $dom->find('table', 2);
+        foreach ($table->find('tr') as $tr) {
+            $td = $tr->children(0);
+            if (is_numeric($remoteId = $td->innertext)) {
+                $response = $this->grab_page([
+                    'site' => "https://www.lydsy.com/JudgeOnline/showsource.php?id=$remoteId",
+                    'oj' => 'bzoj',
+                    'handle' => $this->selectedJudger['handle'],
+                ]);
+                if (strpos($response, $id) !== false) {
+                    $this->sub['remote_id'] = $remoteId;
+                    return;
+                }
             }
         }
+        sleep(1);
+        throw new \Exception("Submission error");
     }
 
     public function submit()
@@ -89,8 +103,7 @@ class Submitter extends Curl
         $validator=Validator::make($this->post_data, [
             'pid' => 'required|integer',
             'coid' => 'required|integer',
-            'iid' => 'required|integer',
-            'solution' => 'required',
+            'solution' => 'required|max:65524', // reserve 12 bytes for pattern
         ]);
 
         if ($validator->fails()) {
