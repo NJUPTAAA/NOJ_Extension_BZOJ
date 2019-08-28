@@ -6,6 +6,7 @@ use App\Babel\Submit\Curl;
 use App\Models\Submission\SubmissionModel;
 use App\Models\JudgerModel;
 use KubAT\PhpSimple\HtmlDomParser;
+use Exception;
 
 class Judger extends Curl
 {
@@ -62,9 +63,9 @@ class Judger extends Curl
         }
 
         $sub["score"] = $sub['verdict'] == "Accepted" ? 1 : 0;
-        assert(preg_match('/^(\d+) ms$/', $status['time'], $match));
+        if (!preg_match('/^(\d+) ms$/', $status['time'], $match)) throw new Exception('Time format error.');
         $sub['time'] = $match[1];
-        assert(preg_match('/^(\d+) kb$/', $status['memory'], $match));
+        if (!preg_match('/^(\d+) kb$/', $status['memory'], $match)) throw new Exception('Memory format error.');
         $sub['memory'] = $match[1];
         $sub['remote_id'] = $row['remote_id'];
 
